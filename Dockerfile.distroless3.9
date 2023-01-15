@@ -1,0 +1,61 @@
+
+#! /bin/bash
+ARG DISTRO
+
+FROM python:3.9.15-bullseye AS base
+
+# Meta arguments
+ARG PYTHON_VERSION=3.9.16
+ARG PYTHON_VERSION_MAJOR=3.9
+ARG POETRY_VERSION=1.3.0
+
+ARG ADD_OS_BUILD_PACKAGES=""
+ARG OS_BUILD_PACKAGES="curl gcc build-essential python3-dev ${ADD_OS_BUILD_PACKAGES}"
+ARG ADD_ENV_VARS=""
+
+# Setup env
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONFAULTHANDLER=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 
+ENV PIP_NO_CACHE_DIR=1 
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENV PYTHON_VERSION=${PYTHON_VERSION}
+
+
+ENV VIRTUAL_ENV=/.venv
+
+# Dependencies
+FROM base AS python-deps
+
+### Install pipenv and compilation dependencies
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends ${OS_BUILD_PACKAGES}\
+    && apt-get autoremove --purge && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv $VIRTUAL_ENV
+
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN pip install --upgrade pip \
+    && pip install --ignore-installed "poetry==${POETRY_VERSION}"
+
+COPY pyproject.toml poetry.lock ./
+RUN poetry export --no-ansi --no-interaction --without-hashes --format requirements.txt --output requirements.txt \
+    && $VIRTUAL_ENV/bin/pip install --pre -r requirements.txt
+
+# Runtime
+FROM ${DISTRO} as final
+
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+WORKDIR /app
+
+COPY --from=python-deps /.venv/lib/python3.9/site-packages /app/site-packages
+ENV PYTHONPATH /app/site-packages
+COPY app/ /app
+COPY models/ /app/models/
+
+EXPOSE 8000
+
+ENTRYPOINT ["python3"]

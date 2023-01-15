@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "fastapi-mockup"
+version = "0.1.0"
+description = ""
+authors = ["benedikt-mue <80708333+benedikt-mue@users.noreply.github.com>"]
+readme = "README.md"
+packages = [{include = "fastapi_mockup"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+uvicorn = {extras = ["standard"], version = "^0.20.0"}
+fastapi = "^0.88.0"
+scikit-learn = "^1.2.0"
+pandas = "^1.5.2"
+xgboost = "^1.7.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
